@@ -28,14 +28,14 @@ def load_azkar_data():
         return {}
 
 def build_main_menu():
-    """إنشاء أزرار القائمة الرئيسية."""
+    """إنشاء أزرار القائمة الرئيسية المعدلة."""
     markup = types.InlineKeyboardMarkup(row_width=2)
-    btn_morning = types.InlineKeyboardButton("🌅 أذكار الصباح", callback_data="cat_morning")
-    btn_evening = types.InlineKeyboardButton("🌆 أذكار المساء", callback_data="cat_evening")
+    btn_travel = types.InlineKeyboardButton("🚗 أذكار السفر", callback_data="cat_travel")
+    btn_daily = types.InlineKeyboardButton("📿 أذكار واستغفار", callback_data="cat_daily_azkar")
     btn_after_prayer = types.InlineKeyboardButton("🕌 أذكار بعد الصلاة", callback_data="cat_after_prayer")
-    btn_duas = types.InlineKeyboardButton("🤲 أدعية متنوعة", callback_data="cat_duas")
+    btn_duas = types.InlineKeyboardButton("🤲 أدعية نبوية", callback_data="cat_duas")
     
-    markup.add(btn_morning, btn_evening, btn_after_prayer, btn_duas)
+    markup.add(btn_travel, btn_daily, btn_after_prayer, btn_duas)
     return markup
 
 @bot.message_handler(commands=['start'])
@@ -63,10 +63,10 @@ def handle_category_selection(call):
     categories = azkar_data.get('categories', {})
     
     category_names = {
-        'morning': '🌅 أذكار الصباح',
-        'evening': '🌆 أذكار المساء',
+        'travel': '🚗 أذكار السفر',
+        'daily_azkar': '📿 أذكار واستغفار',
         'after_prayer': '🕌 أذكار بعد الصلاة',
-        'duas': '🤲 أدعية متنوعة'
+        'duas': '🤲 أدعية نبوية'
     }
     
     items = categories.get(category_key, [])
