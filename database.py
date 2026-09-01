@@ -1,61 +1,68 @@
-import sqlite3
 import os
+import sqlite3
+import psycopg2
 
-# حفظ قاعدة البيانات داخل مجلد data لسهولة ربطها مع Volumes في Railway
-DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'users.db')
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def get_connection():
-    """إنشاء اتصال بقاعدة البيانات مع التأكد من وجود المجلد."""
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    return sqlite3.connect(DB_PATH)
+    if DATABASE_URL:
+        # الاتصال بقاعدة بيانات PostgreSQL على Railway
+        return psycopg2.connect(DATABASE_URL)
+    else:
+        # الاتصال المحلي بقاعدة SQLite
+        os.makedirs("data", exist_ok=True)
+        return sqlite3.connect("data/users.db")
 
 def init_db():
-    """إنشاء جدول المستخدمين في حال عدم وجوده."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY,
-            joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
+    if DATABASE_URL:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                user_id BIGINT PRIMARY KEY
+            )
+        """)
+    else:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                user_id INTEGER PRIMARY KEY
+            )
+        """)
     conn.commit()
+    cursor.close()
     conn.close()
 
-def add_user(user_id: int) -> bool:
-    """إضافة مستخدم جديد إلى قاعدة البيانات دون تكرار."""
+def add_user(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
     try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute('INSERT OR IGNORE INTO users (user_id) VALUES (?)', (user_id,))
+        if DATABASE_URL:
+            cursor.execute("INSERT INTO users (user_id) VALUES (%s) ON CONFLICT (user_id) DO NOTHING", (user_id,))
+        else:
+            cursor.execute("INSERT OR IGNORE INTO users (user_id) VALUES (?)", (user_id,))
         conn.commit()
-        added = cursor.rowcount > 0
+    finally:
+        cursor.close()
         conn.close()
-        return added
-    except Exception as e:
-        print(f"خطأ أثناء إضافة المستخدم {user_id}: {e}")
-        return False
 
-def get_all_users() -> list:
-    """جلب قائمة بكل معرفات المستخدمين للإرسال التلقائي."""
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute('SELECT user_id FROM users')
-        rows = cursor.fetchall()
-        conn.close()
-        return [row[0] for row in rows]
-    except Exception as e:
-        print(f"خطأ أثناء جلب قائمة المستخدمين: {e}")
-        return []
+def get_all_users():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT user_id FROM users")
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return [row[0] for row in rows]
 
-def remove_user(user_id: int):
-    """حذف مستخدم (في حال قام بحظر البوت لتجنب فشل الإرسال المستمر)."""
+def remove_user(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
     try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute('DELETE FROM users WHERE user_id = ?', (user_id,))
+        if DATABASE_URL:
+            cursor.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
+        else:
+            cursor.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
         conn.commit()
+    finally:
+        cursor.close()
         conn.close()
-    except Exception as e:
-        print(f"خطأ أثناء حذف المستخدم {user_id}: {e}")
