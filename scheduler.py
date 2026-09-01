@@ -55,6 +55,6 @@ def send_hourly_reminder(bot):
 def start_scheduler(bot):
     scheduler = BackgroundScheduler()
     # إرسال تذكير كل ساعة
-    scheduler.add_job(send_hourly_reminder, 'interval', minutes=1, args=[bot])
+    scheduler.add_job(send_hourly_reminder, 'interval', hours=1, args=[bot])
     scheduler.start()
     print("تم تفعيل مجدول التذكيرات الساعية بنجاح.")
