@@ -43,13 +43,15 @@ def handle_start(message):
     user_id = message.from_user.id
     first_name = message.from_user.first_name or "المستخدم"
     
-    # إضافة المستخدم لجدول التذكيرات الدوري[span_0](start_span)[span_0](end_span)
+    # إضافة المستخدم لجدول التذكيرات الدوري
     add_user(user_id)
     
     welcome_text = (
         f"أهلاً بك يا {first_name} في بوت الأذكار الإسلامية 🌿\n\n"
         "سيقوم البوت بحفظ حسابك تلقائياً وإرسال أدعية وتذكيرات متنوعة لك **كل ساعة** بإذن الله.\n\n"
-        "يمكنك أيضاً تصفح الأذكار والأدعية المقسمة من القائمة أدناه:"
+        "يمكنك أيضاً تصفح الأذكار والأدعية المقسمة من القائمة أدناه:\n\n"
+        "⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n"
+        "🛠 تم تطوير هذا البوت بواسطة **صالح الخليفي** (@iSx3i)"
     )
     
     bot.send_message(message.chat.id, welcome_text, reply_markup=build_main_menu(), parse_mode='Markdown')
