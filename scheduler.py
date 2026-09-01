@@ -1,47 +1,46 @@
 import json
 import random
-import os
-import telebot
-from apscheduler.schedulers.background import BackgroundScheduler
+import asyncio
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from database import get_all_users, remove_user
 
-AZKAR_FILE = os.path.join(os.path.dirname(__file__), 'data', 'azkar.json')
-
-def load_periodic_azkar():
-    """تحميل قائمة التذكيرات الدورية من ملف JSON."""
+def load_all_azkar():
+    """تحميل دمج كافة الأذكار والأدعية من جميع الأقسام لمنع التكرار وزيادة التنوع"""
     try:
-        with open(AZKAR_FILE, 'r', encoding='utf-8') as f:
+        with open("data/azkar.json", "r", encoding="utf-8") as f:
             data = json.load(f)
-            return data.get('periodic_reminders', [])
+        
+        all_items = []
+        for category_name, items in data.items():
+            if isinstance(items, list):
+                all_items.extend(items)
+        
+        # إزالة التكرارات إن وجدت
+        return list(set(all_items))
     except Exception as e:
-        print(f"خطأ أثناء قراءة ملف الأذكار: {e}")
+        print(f"Error loading azkar: {e}")
         return []
 
-def send_periodic_zkr(bot: telebot.TeleBot):
-    """إرسال تذكير عشوائي لكل المستخدمين كل ساعتين."""
-    azkar_list = load_periodic_azkar()
-    if not azkar_list:
+async def send_hourly_reminder(bot):
+    azkar_pool = load_all_azkar()
+    if not azkar_pool:
         return
+    
+    # اختيار ذكر أو دعاء عشوائي من المجموعة الشاملة
+    random_zekr = random.choice(azkar_pool)
+    message_text = f"✨ **تذكير الساعة** ✨\n\n{random_zekr}"
 
-    selected_zkr = random.choice(azkar_list)
     users = get_all_users()
-
-    message = f"✨ **تذكير دوري** ✨\n\n{selected_zkr['text']}\n\n🤲 لا تنسنا من صالح دعائك."
-
     for user_id in users:
         try:
-            bot.send_message(user_id, message, parse_mode='Markdown')
-        except telebot.apihelper.ApiTelegramException as e:
-            # إذا حظر المستخدم البوت أو حذف حسابه يتم مسحه من قاعدة البيانات
-            if e.error_code in [403, 400]:
-                remove_user(user_id)
-        except Exception as e:
-            print(f"فشل الإرسال للمستخدم {user_id}: {e}")
+            await bot.send_message(chat_id=user_id, text=message_text, parse_mode="Markdown")
+            await asyncio.sleep(0.05)  # تفادي حظر المعدل (Rate Limit)
+        except Exception:
+            # حذف المستخدم من قاعدة البيانات في حال قام بحظر البوت
+            remove_user(user_id)
 
-def start_scheduler(bot: telebot.TeleBot):
-    """بدء مؤقت الإرسال التلقائي كل ساعتين."""
-    scheduler = BackgroundScheduler(timezone="UTC")
-    # تعيين التكرار كل ساعتين (hours=2)
-    scheduler.add_job(send_periodic_zkr, 'interval', hours=2, args=[bot])
+def start_scheduler(bot):
+    scheduler = AsyncIOScheduler()
+    # ضبط التوقيت كل 1 ساعة بدلاً من ساعتين
+    scheduler.add_job(send_hourly_reminder, 'interval', hours=1, args=[bot])
     scheduler.start()
-    print("تم تشغيل جدول التذكيرات التلقائية (كل ساعتين).")
